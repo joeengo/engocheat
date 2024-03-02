@@ -17,7 +17,7 @@ engocheat.constants = {}
 engocheat.ui = {}
 
 do
-    engocheat.constants.baseurl = "https://raw.githubusercontent.com/lome4/thecheat/main/"
+    engocheat.constants.baseurl = ""
     engocheat.constants.prefix = "[engocheat]"
 end
 
@@ -39,7 +39,7 @@ do
         end
 
         
-        local url = data.url or `{data.baseurl or engocheat.constants.baseurl}{data.path}`
+        local url = data.url or `{data.baseurl or engocheat.constants.baseurl}/{data.path}`
         local requested = request({ Url = url })
         if (requested.StatusCode == 200) then
             return requested.Body
@@ -50,7 +50,7 @@ do
 
     engocheat.functions.loadSrc = function(src, ...)
         local loadedFunction, result = loadstring(src)
-        if (not loadedFunction) then 
+        if (not loadedFunction) then
             error(`Error while loading src: {result}`)
         end
 
@@ -60,7 +60,7 @@ end
 
 local ui = engocheat.functions.loadSrc(
     engocheat.functions.getfile({
-        path = "ui.lua",
+        path = "src/ui.lua",
     })
 )
 
