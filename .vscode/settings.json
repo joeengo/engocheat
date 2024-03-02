@@ -1,0 +1,12 @@
+{
+    "robloxLsp.diagnostics.globals": [
+        "isfile",
+        "readfile",
+        "cloneref",
+        "cloneref",
+        "request"
+    ],
+    "robloxLsp.diagnostics.disable": [
+        "unused-local"
+    ]
+}
