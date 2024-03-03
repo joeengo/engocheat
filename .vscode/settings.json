@@ -4,7 +4,12 @@
         "readfile",
         "cloneref",
         "cloneref",
-        "request"
+        "request",
+        "getgenv",
+        "engocheat",
+        "listfiles",
+        "writefile",
+        "makefolder"
     ],
     "robloxLsp.diagnostics.disable": [
         "unused-local"

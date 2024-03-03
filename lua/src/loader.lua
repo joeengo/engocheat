@@ -9,6 +9,9 @@
         possibly create a list of file hashes on the github, compare them to the downloaded file hashes json and download any differences. 
 ]]
 
+-- services
+local httpService = cloneref(game:GetService("HttpService"))
+
 -- global table
 local engocheat = {}
 engocheat.functions = {}
@@ -16,16 +19,33 @@ engocheat.libraries = {}
 engocheat.constants = {}
 engocheat.ui = {}
 
+getgenv().engocheat = engocheat
+
 do
-    engocheat.constants.baseurl = ""
+    engocheat.constants.baseurl = "https://raw.githubusercontent.com/joeengo/engocheat/main/"
+    engocheat.constants.basedir = "engocheat"
     engocheat.constants.prefix = "[engocheat]"
 end
 
 do
+    -- Creates the folders + file
+    engocheat.functions.writeFile = function(path, data)
+        local sections = string.split(path, "/")
+        local currentDir
+        for i, v in sections do
+            if (i == #sections) then
+                writefile(path, data)
+            else
+                currentDir = if currentDir then `{currentDir}/{v}` else v
+                makefolder(currentDir)
+            end
+        end
+    end
+
     --[[
-        getfile
+        getFile
         Usage:
-            getfile({
+            getFile({
                 path = "lib/janitor.lua",
                 -- Uses baseurl as baseurl if path is not found, if no baseurl is supplied, it will resort to the engocheat github.
                 baseurl = "",
@@ -33,19 +53,29 @@ do
                 url = ""
             })
     ]]
-    engocheat.functions.getfile = function(data)
-        if ( ( not data.url ) and ( isfile(`engocheat/{data.path}`) ) ) then
+    engocheat.functions.getLocalFile = function(data) 
+        if (isfile(`engocheat/{data.path}`)) then
             return readfile(`engocheat/{data.path}`)
         end
+    end
 
-        
+    engocheat.functions.getOnlineFile = function(data)
         local url = data.url or `{data.baseurl or engocheat.constants.baseurl}/{data.path}`
+        url = string.gsub(url, "\\", "/")
         local requested = request({ Url = url })
         if (requested.StatusCode == 200) then
             return requested.Body
         end
 
         error(`{engocheat.constants.prefix} Unable to get file {data.url or data.path}, ({requested.StatusCode}: {requested.StatusMessage})`)
+    end
+
+    engocheat.functions.getFile = function(data)
+        return engocheat.functions.getLocalFile(data) or engocheat.functions.getOnlineFile(data)
+    end
+
+    engocheat.functions.getHashManifests = function() 
+        return engocheat.functions.getLocalFile({ path = "hash-manifest.json" }) or "{}", engocheat.functions.getOnlineFile({ path = "hash-manifest.json" }) or error("Online hash manifest not found")
     end
 
     engocheat.functions.loadSrc = function(src, ...)
@@ -58,12 +88,21 @@ do
     end
 end
 
-local ui = engocheat.functions.loadSrc(
-    engocheat.functions.getfile({
-        path = "lua/src/ui.lua",
-    })
-)
+if (getgenv().engocheat_developer) then
+    engocheat.functions.loadSrc( engocheat.functions.getLocalFile( {path = "lua/actions/update-manifest.lua"} ) )
+else
+    local hashedFileDataJSON, onlineHashedFileDataJSON = engocheat.functions.getHashManifests()
+    local hashedFileData, onlineHashedFileData = httpService:JSONDecode(hashedFileDataJSON), httpService:JSONDecode(onlineHashedFileDataJSON)
 
-engocheat.ui.api = ui
+    for path, hash in onlineHashedFileData do 
+        local localHash = hashedFileData[path]
+        if (localHash == hash) then 
+            continue 
+        end
 
-print("hello", "world!", "a")
+        local onlineFileData = engocheat.functions.getOnlineFile({path = path})
+        engocheat.functions.writeFile(`{engocheat.constants.basedir}/{path}`, onlineFileData)
+    end
+        
+    engocheat.functions.writeFile(`{engocheat.constants.basedir}/hash-manifest.json`, onlineHashedFileDataJSON)
+end
