@@ -4,11 +4,6 @@
     DESC: loads engocheat
 ]]
 
---[[
-    TODO:
-        possibly create a list of file hashes on the github, compare them to the downloaded file hashes json and download any differences. 
-]]
-
 local startUnix = os.clock()
 
 -- services
@@ -68,6 +63,8 @@ do
         local requested = request({ Url = url })
         if (requested.StatusCode == 200) then
             return requested.Body
+        elseif (requested.StatusCode == 404) then
+            return
         end
 
         error(`{engocheat.constants.prefix} Unable to get file {data.url or data.path}, ({requested.StatusCode}: {requested.StatusMessage})`)
@@ -90,29 +87,32 @@ do
         return loadedFunction(...)
     end
 
-    engocheat.functions.loadLibrary = function(libName, ...) 
-        local libSrc = engocheat.functions.getFile({path = `lua/lib/{libName}`})
-        return engocheat.functions.loadSrc(libSrc, ...)
-    end
-end
-
-if (getgenv().engocheat_developer) then
-    engocheat.functions.loadSrc( engocheat.functions.getLocalFile( {path = "lua/actions/update-manifest.lua"} ) )
-else
-    local hashedFileDataJSON, onlineHashedFileDataJSON = engocheat.functions.getHashManifests()
-    local hashedFileData, onlineHashedFileData = httpService:JSONDecode(hashedFileDataJSON), httpService:JSONDecode(onlineHashedFileDataJSON)
-
-    for path, hash in onlineHashedFileData do 
-        local localHash = hashedFileData[path]
-        if (localHash == hash) then 
-            continue
+    local libraryCache = {} -- Not sure if this is even needed as i only load the libraries once anyway.
+    engocheat.functions.loadLibrary = function(libName, ...)
+        local result = libraryCache[libName]
+        if (not result) then
+            local libSrc = engocheat.functions.getFile({path = `lua/lib/{libName}`})
+            result = engocheat.functions.loadSrc(libSrc, ...)
+            libraryCache[libName] = result
         end
-
-        local onlineFileData = engocheat.functions.getOnlineFile({path = path})
-        engocheat.functions.writeFile(`{engocheat.constants.basedir}/{path}`, onlineFileData)
+        return result
     end
-        
-    engocheat.functions.writeFile(`{engocheat.constants.basedir}/hash-manifest.json`, onlineHashedFileDataJSON)
+
+    engocheat.functions.runAction = function(actionName, ...)
+        local actSrc = engocheat.functions.getFile({path = `lua/actions/{actionName}`})
+        return engocheat.functions.loadSrc(actSrc, ...)
+    end
 end
 
+-- Run the action to update files/hashes.
+engocheat.functions.runAction("update.lua")
+
+-- Load the files
 engocheat.functions.loadSrc( engocheat.functions.getFile({ path = "lua/src/main.lua" }) )
+engocheat.functions.loadSrc( engocheat.functions.getFile({ path = "lua/src/places/universal.lua" }) )
+
+-- Load this places file
+local placeFile = engocheat.functions.getFile({ path = `lua/src/places/{game.PlaceId}.lua` })
+if (placeFile) then
+    engocheat.functions.loadSrc( placeFile )
+end

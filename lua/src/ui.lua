@@ -1,13 +1,14 @@
 --[[
     engocheat
     FILE: ui.lua
-    DESC: ui library for engocheat, not mine.
+    DESC: ui library for engocheat, not mine. the code for this isn't great, im planning to take just the ui design and implement my own functionality.
 ]]
 
 --[[
 	ui-engine-v2
 	version 1.3a
 	by Singularity (V3rm @ King Singularity) (Discord @ Singularity#5490)
+	modified by engo (@joeengo) for engocheat.
 --]]
 
 local ui_options = {
@@ -18,11 +19,14 @@ local ui_options = {
 }
 
 do
-	local imgui = cloneref(game:GetService("CoreGui")):FindFirstChild("imgui")
-	if imgui then imgui:Destroy() end
+	if getgenv().imgui then getgenv().imgui:Destroy() end
 end
 
 local imgui = Instance.new("ScreenGui")
+getgenv().imgui = imgui
+
+imgui.Name = string.gsub(string.rep("*", math.random(1, 20)), "*", function() return string.char(math.random(1, 255)) end)
+
 local Prefabs = Instance.new("Frame")
 local Label = Instance.new("TextLabel")
 local Window = Instance.new("ImageLabel")
@@ -95,7 +99,6 @@ local Input = Instance.new("TextButton")
 local Input_Roundify_4px = Instance.new("ImageLabel")
 local Windows = Instance.new("Frame")
 
-imgui.Name = "imgui"
 imgui.Parent = cloneref(game:GetService("CoreGui"))
 
 Prefabs.Name = "Prefabs"
@@ -825,8 +828,8 @@ local ps = cloneref(game:GetService("Players"))
 local p = ps.LocalPlayer
 local mouse = p:GetMouse()
 
-local Prefabs = script_Parent:WaitForChild("Prefabs")
-local Windows = script_Parent:FindFirstChild("Windows")
+local Prefabs = imgui:WaitForChild("Prefabs")
+local Windows = imgui:FindFirstChild("Windows")
 
 local checks = {
 	["binding"] = false,
@@ -834,9 +837,9 @@ local checks = {
 
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if input.KeyCode == ((typeof(ui_options.toggle_key) == "EnumItem") and ui_options.toggle_key or Enum.KeyCode.RightShift) then
-		if script_Parent then
+		if imgui then
 			if not checks.binding then
-				script_Parent.Enabled = not script_Parent.Enabled
+				imgui.Enabled = not imgui.Enabled
 			end
 		end
 	end
@@ -899,7 +902,7 @@ local function gMouse()
 end
 
 local function ripple(button, x, y)
-	spawn(function()
+	task.spawn(function()
 		button.ClipsDescendants = true
 
 		local circle = Prefabs:FindFirstChild("Circle"):Clone()
@@ -952,7 +955,7 @@ end
 function library:FormatWindows()
 	format_windows()
 end
-error("joe mama")
+
 function library:AddWindow(title, options)
 	windows = windows + 1
 	local dropdown_open = false
@@ -974,7 +977,7 @@ function library:AddWindow(title, options)
 		local SplitFrame = Window:FindFirstChild("TabSelection"):FindFirstChild("Frame")
 		local Toggle = Bar:FindFirstChild("Toggle")
 
-		spawn(function()
+		task.spawn(function()
 			while true do
 				Bar.BackgroundColor3 = options.main_color
 				Base.BackgroundColor3 = options.main_color
@@ -991,6 +994,7 @@ function library:AddWindow(title, options)
 	local Resizer = Window:WaitForChild("Resizer")
 
 	local window_data = {}
+	window_data.Instance = Window
 	Window.Draggable = true
 
 	do -- Resize Window
@@ -1018,7 +1022,7 @@ function library:AddWindow(title, options)
 			if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
 				Held = true
 
-				spawn(function() -- Loop check
+				task.spawn(function() -- Loop check
 					if Entered and Resizer.Active and options.can_resize then
 						while Held and Resizer.Active do
 
@@ -1093,9 +1097,8 @@ function library:AddWindow(title, options)
 				end
 
 				open = not open
-				wait(options.tween_time)
+				task.wait(options.tween_time)
 				canopen = true
-
 			end
 		end)
 	end
@@ -1121,6 +1124,9 @@ function library:AddWindow(title, options)
 				local new_tab = Prefabs:FindFirstChild("Tab"):Clone()
 				new_tab.Parent = tabs
 				new_tab.ZIndex = new_tab.ZIndex + (windows * 10)
+
+				tab_data.Instance = new_tab
+				tab_data.Button = new_button
 
 				local function show()
 					if dropdown_open then return end
@@ -1150,31 +1156,39 @@ function library:AddWindow(title, options)
 				do -- Tab Elements
 
 					function tab_data:AddLabel(label_text) -- [Label]
-						label_text = tostring(label_text or "New Label")
+						local label_data = {}
+						label_data.Value = tostring(label_text or "New Label")
+						label_text = label_data.Value
 
 						local label = Prefabs:FindFirstChild("Label"):Clone()
-
 						label.Parent = new_tab
 						label.Text = label_text
 						label.Size = UDim2.new(0, gNameLen(label), 0, 20)
 						label.ZIndex = label.ZIndex + (windows * 10)
 
-						return label
+						label_data.Instance = label
+
+						function label_data:Set(value) 
+							label_data.Value = tostring(value or "Updated Label")
+							label_text = label_data.Value
+						end
+
+						return label_data
 					end
 
 					function tab_data:AddButton(button_text, callback) -- [Button]
+						local button_data = {}
 						button_text = tostring(button_text or "New Button")
 						callback = typeof(callback) == "function" and callback or function()end
 
 						local button = Prefabs:FindFirstChild("Button"):Clone()
-
 						button.Parent = new_tab
 						button.Text = button_text
 						button.Size = UDim2.new(0, gNameLen(button), 0, 20)
 						button.ZIndex = button.ZIndex + (windows * 10)
 						button:GetChildren()[1].ZIndex = button:GetChildren()[1].ZIndex + (windows * 10)
 
-						spawn(function()
+						task.spawn(function()
 							while true do
 								if button and button:GetChildren()[1] then
 									button:GetChildren()[1].ImageColor3 = options.main_color
@@ -1183,16 +1197,22 @@ function library:AddWindow(title, options)
 							end
 						end)
 
+						function button_data:Click() 
+							pcall(callback)
+						end
+
 						button.MouseButton1Click:Connect(function()
 							ripple(button, mouse.X, mouse.Y)
-							pcall(callback)
+							button_data:Click()
 						end)
 
-						return button
+						button_data.Instance = button
+
+						return button_data
 					end
 
 					function tab_data:AddSwitch(switch_text, callback) -- [Switch]
-						local switch_data = {}
+						local switch_data = {Value = false}
 
 						switch_text = tostring(switch_text or "New Switch")
 						callback = typeof(callback) == "function" and callback or function()end
@@ -1206,7 +1226,9 @@ function library:AddWindow(title, options)
 						switch.ZIndex = switch.ZIndex + (windows * 10)
 						switch:GetChildren()[1].ZIndex = switch:GetChildren()[1].ZIndex + (windows * 10)
 
-						spawn(function()
+						switch_data.Instance = switch
+
+						task.spawn(function()
 							while true do
 								if switch and switch:GetChildren()[1] then
 									switch:GetChildren()[1].ImageColor3 = options.main_color
@@ -1215,24 +1237,26 @@ function library:AddWindow(title, options)
 							end
 						end)
 
-						local toggled = false
 						switch.MouseButton1Click:Connect(function()
-							toggled = not toggled
-							switch.Text = toggled and utf8.char(10003) or ""
-							pcall(callback, toggled)
+							switch_data.Value = not switch_data.Value
+							switch.Text = switch_data.Value and utf8.char(10003) or ""
+							pcall(callback, switch_data.Value)
 						end)
 
 						function switch_data:Set(bool)
-							toggled = (typeof(bool) == "boolean") and bool or false
-							switch.Text = toggled and utf8.char(10003) or ""
-							pcall(callback,toggled)
+							switch_data.Value = (typeof(bool) == "boolean") and bool or false
+							switch.Text = switch_data.Value and utf8.char(10003) or ""
+							pcall(callback,switch_data.Value)
 						end
 
-						return switch_data, switch
+						return switch_data
 					end
+					tab_data.AddToggle = tab_data.AddSwitch
 
 					function tab_data:AddTextBox(textbox_text, callback, textbox_options)
+						local textbox_data = {}
 						textbox_text = tostring(textbox_text or "New TextBox")
+						textbox_data.Value = textbox_text
 						callback = typeof(callback) == "function" and callback or function()end
 						textbox_options = typeof(textbox_options) == "table" and textbox_options or {["clear"] = true}
 						textbox_options = {
@@ -1246,10 +1270,17 @@ function library:AddWindow(title, options)
 						textbox.ZIndex = textbox.ZIndex + (windows * 10)
 						textbox:GetChildren()[1].ZIndex = textbox:GetChildren()[1].ZIndex + (windows * 10)
 
+						textbox_data.Instance = textbox
+
+						function textbox_data:Set(value) 
+							textbox_data.Value = value
+							pcall(callback, textbox_data.Value)
+						end
+
 						textbox.FocusLost:Connect(function(ep)
 							if ep then
 								if #textbox.Text > 0 then
-									pcall(callback, textbox.Text)
+									textbox_data:Set(textbox.Text)
 									if textbox_options.clear then
 										textbox.Text = ""
 									end
@@ -1257,8 +1288,9 @@ function library:AddWindow(title, options)
 							end
 						end)
 
-						return textbox
+						return textbox_data
 					end
+					tab_data.AddTextbox = tab_data.AddTextBox
 
 					function tab_data:AddSlider(slider_text, callback, slider_options)
 						local slider_data = {}
@@ -1268,6 +1300,7 @@ function library:AddWindow(title, options)
 						slider_options = typeof(slider_options) == "table" and slider_options or {}
 						slider_options = {
 							["min"] = slider_options.min or 0,
+							["default"] = slider_options.default or slider_options.min or 0,
 							["max"] = slider_options.max or 100,
 							["readonly"] = slider_options.readonly or false,
 						}
@@ -1302,7 +1335,7 @@ function library:AddWindow(title, options)
 								if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
 									Held = true
 
-									spawn(function() -- Loop check
+									task.spawn(function() -- Loop check
 										if Entered and not slider_options.readonly then
 											while Held and (not dropdown_open) do
 												local mouse_location = gMouse()
@@ -1329,6 +1362,7 @@ function library:AddWindow(title, options)
 
 												local sel_value = math.floor(((diff / 100) * p) + minv)
 
+												slider_data.Value = sel_value
 												value.Text = tostring(sel_value)
 												pcall(callback, sel_value)
 
@@ -1345,26 +1379,26 @@ function library:AddWindow(title, options)
 							end)
 
 							function slider_data:Set(new_value)
-								new_value = tonumber(new_value) or 0
-								new_value = (((new_value >= 0 and new_value <= 100) and new_value) / 100)
-
-								Resize(indicator, {Size = UDim2.new(new_value or 0, 0, 0, 20)}, options.tween_time)
-								local p = math.floor((new_value or 0) * 100)
-
 								local maxv = slider_options.max
 								local minv = slider_options.min
-								local diff = maxv - minv
+								local range = maxv - minv
+								local percent = (new_value - minv) / range
 
-								local sel_value = math.floor(((diff / 100) * p) + minv)
+								Resize(indicator, {Size = UDim2.new(percent or 0, 0, 0, 20)}, options.tween_time)
+								local p = math.floor((new_value or 0) * 100)
+								
+								slider_data.Value = new_value
+								value.Text = tostring(new_value)
 
-								value.Text = tostring(sel_value)
-								pcall(callback, sel_value)
+								pcall(callback, new_value)
 							end
 
-							slider_data:Set(slider_options["min"])
+							slider_data:Set(slider_options["default"])
 						end
 
-						return slider_data, slider
+						slider_data.Instance = slider
+
+						return slider_data
 					end
 
 					function tab_data:AddKeybind(keybind_name, callback, keybind_options)
@@ -1374,20 +1408,20 @@ function library:AddWindow(title, options)
 						callback = typeof(callback) == "function" and callback or function()end
 						keybind_options = typeof(keybind_options) == "table" and keybind_options or {}
 						keybind_options = {
-							["standard"] = keybind_options.standard or Enum.KeyCode.RightShift,
+							["default"] = keybind_options.default or nil,
 						}
 
-						local keybind = Prefabs:FindFirstChild("Keybind"):Clone()
-						local input = keybind:FindFirstChild("Input")
-						local title = keybind:FindFirstChild("Title")
-						keybind.ZIndex = keybind.ZIndex + (windows * 10)
+						local keybind_instance = Prefabs:FindFirstChild("Keybind"):Clone()
+						local input = keybind_instance:FindFirstChild("Input")
+						local title = keybind_instance:FindFirstChild("Title")
+						keybind_instance.ZIndex = keybind_instance.ZIndex + (windows * 10)
 						input.ZIndex = input.ZIndex + (windows * 10)
 						input:GetChildren()[1].ZIndex = input:GetChildren()[1].ZIndex + (windows * 10)
 						title.ZIndex = title.ZIndex + (windows * 10)
 
-						keybind.Parent = new_tab
+						keybind_instance.Parent = new_tab
 						title.Text = "  " .. keybind_name
-						keybind.Size = UDim2.new(0, gNameLen(title) + 80, 0, 20)
+						keybind_instance.Size = UDim2.new(0, gNameLen(title) + 80, 0, 20)
 
 						local shortkeys = { -- thanks to stroketon for helping me out with this
 				            RightControl = 'RightCtrl',
@@ -1398,24 +1432,27 @@ function library:AddWindow(title, options)
 				            MouseButton2 = "Mouse2"
 				        }
 
-						local keybind = keybind_options.standard
-
+						keybind_data.Value =  keybind_options.default
 						function keybind_data:SetKeybind(Keybind)
-							local key = shortkeys[Keybind.Name] or Keybind.Name
-							input.Text = key
-							keybind = Keybind
+							if Keybind == Enum.KeyCode.Escape or Keybind == Enum.KeyCode.Backspace or Keybind == keybind_data.Value then
+								Keybind = nil
+							end
+							local keytext = shortkeys[Keybind.Name] or Keybind and Keybind.Name or "None"
+							input.Text = keytext
+							keybind_data.Value = Keybind
 						end
 
 						UIS.InputBegan:Connect(function(a, b)
+							-- TODO: add textbox check here bc typing and enabling modules not fun
 							if checks.binding then
-								spawn(function()
-									wait()
+								task.spawn(function()
+									task.wait()
 									checks.binding = false
 								end)
 								return
 							end
-							if a.KeyCode == keybind and not b then
-								pcall(callback, keybind)
+							if a.KeyCode == keybind_data.Value and not b then
+								pcall(callback, keybind_data.Value)
 							end
 						end)
 
@@ -1429,10 +1466,11 @@ function library:AddWindow(title, options)
 							keybind_data:SetKeybind(a.KeyCode)
 						end)
 
-						return keybind_data, keybind
+						keybind_data.Instance = keybind_instance
+						return keybind_data
 					end
 
-					function tab_data:AddDropdown(dropdown_name, callback)
+					function tab_data:AddDropdown(dropdown_name, callback, dropdown_options)
 						local dropdown_data = {}
 						dropdown_name = tostring(dropdown_name or "New Dropdown")
 						callback = typeof(callback) == "function" and callback or function()end
@@ -1448,7 +1486,7 @@ function library:AddWindow(title, options)
 						dropdown:GetChildren()[3].ZIndex = dropdown:GetChildren()[3].ZIndex + (windows * 10)
 
 						dropdown.Parent = new_tab
-						dropdown.Text = "      " .. dropdown_name
+						dropdown.Text = dropdown_name
 						box.Size = UDim2.new(1, 0, 0, 0)
 
 						local open = false
@@ -1474,14 +1512,16 @@ function library:AddWindow(title, options)
 
 						end)
 
-						function dropdown_data:Add(n)
+						-- TODO: add multi in dropdown options
+						function dropdown_data:Add(val)
 							local object_data = {}
-							n = tostring(n or "New Object")
+							object_data.Value = val
+							local n = tostring(val or "New Object")
 
 							local object = Prefabs:FindFirstChild("DropdownButton"):Clone()
 
 							object.Parent = objects
-							object.Text = n
+							object.Text = "  " .. n
 							object.ZIndex = object.ZIndex + (windows * 10)
 
 							object.MouseEnter:Connect(function()
@@ -1500,14 +1540,19 @@ function library:AddWindow(title, options)
 								Resize(box, {Size = UDim2.new(1, 0, 0, len)}, options.tween_time)
 							end
 
+							function object_data:Set() 
+								dropdown.Text = " " .. dropdown_name .. " - [ " .. n .. " ]"
+								dropdown_open = false
+								open = false
+								Resize(box, {Size = UDim2.new(1, 0, 0, 0)}, options.tween_time)
+								Resize(indicator, {Rotation = -90}, options.tween_time)
+								pcall(callback, object_data.Value)
+								dropdown_data.Value = object_data.Value
+							end
+
 							object.MouseButton1Click:Connect(function()
 								if dropdown_open then
-									dropdown.Text = "      [ " .. n .. " ]"
-									dropdown_open = false
-									open = false
-									Resize(box, {Size = UDim2.new(1, 0, 0, 0)}, options.tween_time)
-									Resize(indicator, {Rotation = -90}, options.tween_time)
-									pcall(callback, n)
+									object_data:Set()
 								end
 							end)
 
@@ -1515,10 +1560,19 @@ function library:AddWindow(title, options)
 								object:Destroy()
 							end
 
-							return object, object_data
+							object_data.Instance = object
+							return object_data
 						end
 
-						return dropdown_data, dropdown
+						for i, v in (dropdown_options.defaults or {}) do
+							local obj = dropdown_data:Add(v)
+							if obj.Value == dropdown_options.default then 
+								obj:Set()
+							end
+						end
+
+						dropdown_data.Instance = dropdown
+						return dropdown_data
 					end
 
 					function tab_data:AddColorPicker(callback)
@@ -1546,6 +1600,7 @@ function library:AddWindow(title, options)
 								local color = Color3.fromHSV(h, s, v)
 								sample.ImageColor3 = color
 								saturation.ImageColor3 = Color3.fromHSV(h, 1, 1)
+								color_picker_data.Value = color
 								pcall(callback, color)
 							end
 
@@ -1583,7 +1638,7 @@ function library:AddWindow(title, options)
 								if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
 									Held = true
 
-									spawn(function() -- Loop check
+									task.spawn(function() -- Loop check
 										while Held and Entered1 and (not dropdown_open) do -- Palette
 											local mouse_location = gMouse()
 
@@ -1621,14 +1676,16 @@ function library:AddWindow(title, options)
 
 							function color_picker_data:Set(color)
 								color = typeof(color) == "Color3" and color or Color3.new(1, 1, 1)
-								local h2, s2, v2 = rgbtohsv(color.r * 255, color.g * 255, color.b * 255)
+								local h2, s2, v2 = rgbtohsv(color.R * 255, color.G * 255, color.B * 255)
 								sample.ImageColor3 = color
 								saturation.ImageColor3 = Color3.fromHSV(h2, 1, 1)
 								pcall(callback, color)
+								color_picker_data.Value = color
 							end
 						end
 
-						return color_picker_data, color_picker
+						color_picker_data.Instance = color_picker
+						return color_picker_data
 					end
 
 					function tab_data:AddConsole(console_options)
@@ -1863,9 +1920,9 @@ function library:AddWindow(title, options)
 
 									sf.CanvasSize = UDim2.new(0, 0, lin * 0.153846154, 0)
 								end
+							end
 
 							local highlight_logs = function(type)
-							end
 								if type == "Text" then
 									Source.Text = Source.Text:gsub("\13", "")
 									Source.Text = Source.Text:gsub("\t", "      ")
@@ -1893,6 +1950,7 @@ function library:AddWindow(title, options)
 							end
 
 							function console_data:Set(code)
+								console_data.Value = code
 								Source.Text = tostring(code)
 							end
 
@@ -1906,7 +1964,8 @@ function library:AddWindow(title, options)
 
 						end
 
-						return console_data, console
+						console_data.Instance = console
+						return console_data
 					end
 
 					function tab_data:AddHorizontalAlignment()
@@ -1916,21 +1975,13 @@ function library:AddWindow(title, options)
 						ha.Parent = new_tab
 
 						function ha_data:AddButton(...)
-							local data, object
-							local ret = {tab_data:AddButton(...)}
-							if typeof(ret[1]) == "table" then
-								data = ret[1]
-								object = ret[2]
-								object.Parent = ha
-								return data, object
-							else
-								object = ret[1]
-								object.Parent = ha
-								return object
-							end
+							local ret = tab_data:AddButton(...)
+							ret.Instance.Parent = ha
+							return ret
 						end
 
-						return ha_data, ha
+						ha_data.Instance = ha
+						return ha_data
 					end
 
 					function tab_data:AddFolder(folder_name) -- [Folder]
@@ -1951,7 +2002,7 @@ function library:AddWindow(title, options)
 						folder.Parent = new_tab
 						button.Text = "      " .. folder_name
 
-						spawn(function()
+						task.spawn(function()
 							while true do
 								if button and button:GetChildren()[1] then
 									button:GetChildren()[1].ImageColor3 = options.main_color
@@ -1983,31 +2034,23 @@ function library:AddWindow(title, options)
 							open = not open
 						end)
 
-						spawn(function()
+						task.spawn(function()
 							while true do
 								Resize(folder, {Size = UDim2.new(1, 0, 0, (open and gFolderLen() or 20))}, options.tween_time)
-								wait()
+								task.wait()
 							end
 						end)
 
 						for i,v in next, tab_data do
 							folder_data[i] = function(...)
-								local data, object
-								local ret = {v(...)}
-								if typeof(ret[1]) == "table" then
-									data = ret[1]
-									object = ret[2]
-									object.Parent = objects
-									return data, object
-								else
-									object = ret[1]
-									object.Parent = objects
-									return object
-								end
+								local ret = v(...)
+								ret.Instance.Parent = objects
+								return ret
 							end
 						end
 
-						return folder_data, folder
+						folder_data.Instance = folder
+						return folder_data
 					end
 
 				end
@@ -2025,7 +2068,7 @@ function library:AddWindow(title, options)
 		end
 	end
 
-	return window_data, Window
+	return window_data
 end
 
 return library
