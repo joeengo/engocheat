@@ -100,6 +100,7 @@ else
             continue 
         end
 
+        local onlinePath = string.gsub(path, "engocheat\\", "")
         local onlineFileData = engocheat.functions.getOnlineFile({path = path})
         engocheat.functions.writeFile(`{engocheat.constants.basedir}/{path}`, onlineFileData)
     end
