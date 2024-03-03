@@ -9,6 +9,8 @@
         possibly create a list of file hashes on the github, compare them to the downloaded file hashes json and download any differences. 
 ]]
 
+local startUnix = os.clock()
+
 -- services
 local httpService = cloneref(game:GetService("HttpService"))
 
@@ -18,6 +20,7 @@ engocheat.functions = {}
 engocheat.libraries = {}
 engocheat.constants = {}
 engocheat.ui = {}
+engocheat.startUnix = startUnix
 
 getgenv().engocheat = engocheat
 
@@ -54,8 +57,8 @@ do
             })
     ]]
     engocheat.functions.getLocalFile = function(data) 
-        if (isfile(`engocheat/{data.path}`)) then
-            return readfile(`engocheat/{data.path}`)
+        if (isfile(`{engocheat.constants.basedir}/{data.path}`)) then
+            return readfile(`{engocheat.constants.basedir}/{data.path}`)
         end
     end
 
@@ -86,6 +89,11 @@ do
 
         return loadedFunction(...)
     end
+
+    engocheat.functions.loadLibrary = function(libName, ...) 
+        local libSrc = engocheat.functions.getFile({path = `lua/lib/{libName}`})
+        return engocheat.functions.loadSrc(libSrc, ...)
+    end
 end
 
 if (getgenv().engocheat_developer) then
@@ -97,7 +105,7 @@ else
     for path, hash in onlineHashedFileData do 
         local localHash = hashedFileData[path]
         if (localHash == hash) then 
-            continue 
+            continue
         end
 
         local onlineFileData = engocheat.functions.getOnlineFile({path = path})
@@ -106,3 +114,5 @@ else
         
     engocheat.functions.writeFile(`{engocheat.constants.basedir}/hash-manifest.json`, onlineHashedFileDataJSON)
 end
+
+engocheat.functions.loadSrc( engocheat.functions.getFile({ path = "lua/src/main.lua" }) )
