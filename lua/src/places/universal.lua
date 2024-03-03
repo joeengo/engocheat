@@ -63,3 +63,5 @@ do
         engocheat.ui.selfDestructJanitor:Cleanup()
     end)
 end
+
+print("Universal loaded, you are up to date!")
