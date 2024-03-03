@@ -10,7 +10,6 @@
         "listfiles",
         "writefile",
         "makefolder",
-        "yes u can"
     ],
     "robloxLsp.diagnostics.disable": [
         "unused-local"
