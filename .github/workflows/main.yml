@@ -1,0 +1,9 @@
+on: [push]
+
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    name: hashes lua files
+    steps:
+      - name: run hash action
+        uses: ./action.yml
