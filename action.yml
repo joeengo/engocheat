@@ -1,0 +1,5 @@
+name: 'Update hash manifest'
+description: 'Updates the hash manifest JSON file'
+runs:
+  using: 'node20'
+  main: 'action.js'
