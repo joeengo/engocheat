@@ -7,4 +7,4 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: run hash action
-        uses: action.yml
+        uses: /action.yml
