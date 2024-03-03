@@ -14,7 +14,7 @@ local function createHashManifestRecursive(dir, manifest)
     local files = listfiles(dir)
     for i, v in files do 
         if (isfile(v)) then
-            manifest[v] = sha.sha512(readfile(v))
+            manifest[string.gsub(v, "engocheat/", "")] = sha.sha512(readfile(v))
             task.wait() -- Krampus is awful and lags on readfile :skull:
         else
             createHashManifestRecursive(v, manifest)
