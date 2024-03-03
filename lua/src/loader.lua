@@ -6,6 +6,10 @@
 
 local startUnix = os.clock()
 
+if (getgenv().engocheat) then 
+    return error("engocheat already executed, press remove cheat to re-execute.")
+end
+
 -- services
 local httpService = cloneref(game:GetService("HttpService"))
 
