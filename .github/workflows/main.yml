@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     name: hashes lua files
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout
+        uses: actions/checkout@v1
       - name: run hash action
-        uses: ./.github/actions/action
+        uses: ./.github/actions/action.yml
