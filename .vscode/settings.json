@@ -9,7 +9,8 @@
         "engocheat",
         "listfiles",
         "writefile",
-        "makefolder"
+        "makefolder",
+        "yes u can"
     ],
     "robloxLsp.diagnostics.disable": [
         "unused-local"
