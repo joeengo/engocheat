@@ -66,4 +66,4 @@ local ui = engocheat.functions.loadSrc(
 
 engocheat.ui.api = ui
 
-print("hello")
+print("hello", "world!")
