@@ -1,5 +1,5 @@
 # engocheat
-*in development...*
+another project i cant be bothered to finish :)
 
 current loader:
 ```lua
