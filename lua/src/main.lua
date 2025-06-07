@@ -15,9 +15,6 @@ do
     )
 end
 
--- Init xylex stupid entity
-engocheat.libraries.entity.fullEntityRefresh()
-
 -- Self destruct janitor
 engocheat.ui.selfDestructJanitor = engocheat.libraries.janitor.new()
 
