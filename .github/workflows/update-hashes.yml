@@ -1,0 +1,35 @@
+name: Update Hash Manifest
+
+on:
+  push:
+    paths:
+      - 'engocheat/lua/**'
+
+jobs:
+  update-hashes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies (if needed)
+        run: |
+          npm install
+
+      - name: Run Manifest Generator
+        run: |
+          node generate-manifest.js
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add engocheat/hash-manifest.json
+          git diff --cached --quiet || git commit -m "[Auto] update hash-manifest.json"
+          git push
