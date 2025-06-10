@@ -2,16 +2,17 @@
     engocheat
     FILE: loader.lua
     DESC: loads engocheat
+    BY: engo
 ]]
 
 local startUnix = os.clock()
 
 if (getgenv().engocheat) then 
-    return error("engocheat already executed, press remove cheat to re-execute.")
+    return error('engocheat already executed, press remove cheat to re-execute.')
 end
 
 -- services
-local httpService = cloneref(game:GetService("HttpService"))
+local httpService = cloneref(game:GetService('HttpService'))
 
 -- global table
 local engocheat = {}
@@ -24,15 +25,19 @@ engocheat.startUnix = startUnix
 getgenv().engocheat = engocheat
 
 do
-    engocheat.constants.baseurl = "https://raw.githubusercontent.com/joeengo/engocheat/main/"
-    engocheat.constants.basedir = "engocheat"
-    engocheat.constants.prefix = "[engocheat]"
+    engocheat.constants.baseurl = 'https://raw.githubusercontent.com/joeengo/engocheat/main/'
+    engocheat.constants.basedir = 'engocheat'
+    engocheat.constants.prefix = '[engocheat]'
 end
 
 do
+
+    -- global engocheat functions
+
+    
     -- Creates the folders + file
     engocheat.functions.writeFile = function(path, data)
-        local sections = string.split(path, "/")
+        local sections = string.split(path, '/')
         local currentDir
         for i, v in sections do
             if (i == #sections) then
@@ -48,11 +53,11 @@ do
         getFile
         Usage:
             getFile({
-                path = "lib/janitor.lua",
+                path = 'lib/janitor.lua',
                 -- Uses baseurl as baseurl if path is not found, if no baseurl is supplied, it will resort to the engocheat github.
-                baseurl = "",
+                baseurl = '',
                 -- if url is supplied it bypasses the 2 above fields and directly uses it.
-                url = ""
+                url = ''
             })
     ]]
     engocheat.functions.getLocalFile = function(data) 
@@ -63,7 +68,7 @@ do
 
     engocheat.functions.getOnlineFile = function(data)
         local url = data.url or `{data.baseurl or engocheat.constants.baseurl}/{data.path}`
-        url = string.gsub(url, "\\", "/")
+        url = string.gsub(url, '\\', '/')
         local requested = request({ Url = url })
         if (requested.StatusCode == 200) then
             return requested.Body
@@ -79,11 +84,11 @@ do
     end
 
     engocheat.functions.getHashManifests = function() 
-        return engocheat.functions.getLocalFile({ path = "hash-manifest.json" }) or "{}", engocheat.functions.getOnlineFile({ path = "hash-manifest.json" }) or error("Online hash manifest not found")
+        return engocheat.functions.getLocalFile({ path = 'hash-manifest.json' }) or '{}', engocheat.functions.getOnlineFile({ path = 'hash-manifest.json' }) or error('Online hash manifest not found')
     end
 
-    engocheat.functions.loadSrc = function(src, ...)
-        local loadedFunction, result = loadstring(src)
+    engocheat.functions.loadSrc = function(src, name, ...)
+        local loadedFunction, result = loadstring(src, name or 'engocheat-file')
         if (not loadedFunction) then
             error(`Error while loading src: {result}`)
         end
@@ -96,27 +101,28 @@ do
         local result = libraryCache[libName]
         if (not result) then
             local libSrc = engocheat.functions.getFile({path = `lua/lib/{libName}`})
-            result = engocheat.functions.loadSrc(libSrc, ...)
+            result = engocheat.functions.loadSrc(libSrc, libName, ...)
             libraryCache[libName] = result
         end
+        
         return result
     end
 
     engocheat.functions.runAction = function(actionName, ...)
         local actSrc = engocheat.functions.getFile({path = `lua/actions/{actionName}`})
-        return engocheat.functions.loadSrc(actSrc, ...)
+        return engocheat.functions.loadSrc(actSrc, actionName, ...)
     end
 end
 
 -- Run the action to update files/hashes.
-engocheat.functions.runAction("update.lua")
+engocheat.functions.runAction('update.lua')
 
 -- Load the files
-engocheat.functions.loadSrc( engocheat.functions.getFile({ path = "lua/src/main.lua" }) )
-engocheat.functions.loadSrc( engocheat.functions.getFile({ path = "lua/src/places/universal.lua" }) )
+engocheat.functions.loadSrc( engocheat.functions.getFile({ path = 'lua/src/main.lua' }), 'engocheat-main' )
+engocheat.functions.loadSrc( engocheat.functions.getFile({ path = 'lua/src/places/universal.lua' }), 'engocheat-universal' )
 
 -- Load this places file
-local placeFile = engocheat.functions.getFile({ path = `lua/src/places/{game.PlaceId}.lua` })
+local placeFile, name = engocheat.functions.getFile({ path = `lua/src/places/{game.PlaceId}.lua` })
 if (placeFile) then
-    engocheat.functions.loadSrc( placeFile )
+    engocheat.functions.loadSrc( placeFile, name )
 end

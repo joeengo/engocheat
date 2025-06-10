@@ -2,6 +2,7 @@
     engocheat
     FILE: ui.lua
     DESC: ui library for engocheat, not mine. the code for this isn't great, im planning to take just the ui design and implement my own functionality.
+	BY: engo, Singularity
 ]]
 
 --[[
@@ -27,6 +28,7 @@ getgenv().imgui = imgui
 
 imgui.Name = string.gsub(string.rep("*", math.random(1, 20)), "*", function() return string.char(math.random(1, 255)) end)
 
+
 local Prefabs = Instance.new("Frame")
 local Label = Instance.new("TextLabel")
 local Window = Instance.new("ImageLabel")
@@ -41,7 +43,7 @@ local TabSelection = Instance.new("ImageLabel")
 local TabButtons = Instance.new("Frame")
 local UIListLayout = Instance.new("UIListLayout")
 local Frame = Instance.new("Frame")
-local Tab = Instance.new("Frame")
+local Tab = Instance.new("ScrollingFrame")
 local UIListLayout_2 = Instance.new("UIListLayout")
 local TextBox = Instance.new("TextBox")
 local TextBox_Roundify_4px = Instance.new("ImageLabel")
@@ -235,6 +237,11 @@ Tab.BackgroundColor3 = Color3.new(1, 1, 1)
 Tab.BackgroundTransparency = 1
 Tab.Size = UDim2.new(1, 0, 1, 0)
 Tab.Visible = false
+Tab.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Tab.ScrollBarThickness = 3
+Tab.CanvasSize = UDim2.new(0, 0, 0, 0)
+Tab.ScrollBarImageColor3 = ui_options.main_color
+Tab.BorderSizePixel = 0
 
 UIListLayout_2.Parent = Tab
 UIListLayout_2.SortOrder = Enum.SortOrder.LayoutOrder
@@ -345,7 +352,7 @@ Dropdown.BackgroundColor3 = Color3.new(1, 1, 1)
 Dropdown.BackgroundTransparency = 1
 Dropdown.BorderSizePixel = 0
 Dropdown.Position = UDim2.new(-0.055555556, 0, 0.0833333284, 0)
-Dropdown.Size = UDim2.new(0, 200, 0, 20)
+Dropdown.Size = UDim2.new(1, 0, 0, 20)
 Dropdown.ZIndex = 2
 Dropdown.Font = Enum.Font.GothamBold
 Dropdown.Text = "      Dropdown"
@@ -357,7 +364,7 @@ Indicator_2.Name = "Indicator"
 Indicator_2.Parent = Dropdown
 Indicator_2.BackgroundColor3 = Color3.new(1, 1, 1)
 Indicator_2.BackgroundTransparency = 1
-Indicator_2.Position = UDim2.new(0.899999976, -10, 0.100000001, 0)
+Indicator_2.Position = UDim2.new(1, -20, 0.100000001, 0)
 Indicator_2.Rotation = -90
 Indicator_2.Size = UDim2.new(0, 15, 0, 15)
 Indicator_2.ZIndex = 2
@@ -795,7 +802,7 @@ Input.Position = UDim2.new(1, -85, 0, 2)
 Input.Size = UDim2.new(0, 80, 1, -4)
 Input.ZIndex = 2
 Input.Font = Enum.Font.GothamSemibold
-Input.Text = "RShift"
+Input.Text = "None"
 Input.TextColor3 = Color3.new(0.784314, 0.784314, 0.784314)
 Input.TextSize = 12
 Input.TextWrapped = true
@@ -834,16 +841,6 @@ local Windows = imgui:FindFirstChild("Windows")
 local checks = {
 	["binding"] = false,
 }
-
-UIS.InputBegan:Connect(function(input, gameProcessed)
-	if input.KeyCode == ((typeof(ui_options.toggle_key) == "EnumItem") and ui_options.toggle_key or Enum.KeyCode.RightShift) then
-		if imgui then
-			if not checks.binding then
-				imgui.Enabled = not imgui.Enabled
-			end
-		end
-	end
-end)
 
 local function Resize(part, new, _delay)
 	_delay = _delay or 0.5
@@ -897,8 +894,9 @@ local function gNameLen(obj)
 	return obj.TextBounds.X + 15
 end
 
+local guiService = cloneref(game:GetService("GuiService"))	
 local function gMouse()
-	return Vector2.new(UIS:GetMouseLocation().X + 1, UIS:GetMouseLocation().Y - 35)
+	return Vector2.new(UIS:GetMouseLocation().X, UIS:GetMouseLocation().Y - guiService:GetGuiInset().Y)
 end
 
 local function ripple(button, x, y)
@@ -984,6 +982,13 @@ function library:AddWindow(title, options)
 				Base.ImageColor3 = options.main_color
 				Top.ImageColor3 = options.main_color
 				SplitFrame.BackgroundColor3 = options.main_color
+				pcall(function()
+					for i, v in next, Window:FindFirstChild("Tabs"):GetChildren() do
+						if v:IsA('ScrollingFrame') then
+							v.ScrollBarImageColor3 = options.main_color
+						end
+					end
+				end)
 
 				RS.Heartbeat:Wait()
 			end
@@ -1363,7 +1368,7 @@ function library:AddWindow(title, options)
 												local sel_value = math.floor(((diff / 100) * p) + minv)
 
 												slider_data.Value = sel_value
-												value.Text = tostring(sel_value)
+												value.Text = '    ' .. tostring(sel_value)
 												pcall(callback, sel_value)
 
 												RS.Heartbeat:Wait()
@@ -1388,7 +1393,7 @@ function library:AddWindow(title, options)
 								local p = math.floor((new_value or 0) * 100)
 								
 								slider_data.Value = new_value
-								value.Text = tostring(new_value)
+								value.Text = '    ' .. tostring(new_value)
 
 								pcall(callback, new_value)
 							end
@@ -1408,7 +1413,7 @@ function library:AddWindow(title, options)
 						callback = typeof(callback) == "function" and callback or function()end
 						keybind_options = typeof(keybind_options) == "table" and keybind_options or {}
 						keybind_options = {
-							["default"] = keybind_options.default or nil,
+							default = keybind_options.default or nil,
 						}
 
 						local keybind_instance = Prefabs:FindFirstChild("Keybind"):Clone()
@@ -1419,17 +1424,20 @@ function library:AddWindow(title, options)
 						input:GetChildren()[1].ZIndex = input:GetChildren()[1].ZIndex + (windows * 10)
 						title.ZIndex = title.ZIndex + (windows * 10)
 
+
+
 						keybind_instance.Parent = new_tab
 						title.Text = "  " .. keybind_name
+						title.TextTransparency = 0
+						title.Visible = true
+						title.Size = UDim2.fromScale(1, 1)
 						keybind_instance.Size = UDim2.new(0, gNameLen(title) + 80, 0, 20)
 
-						local shortkeys = { -- thanks to stroketon for helping me out with this
+						local shortkeys = {
 				            RightControl = 'RightCtrl',
 				            LeftControl = 'LeftCtrl',
 				            LeftShift = 'LShift',
 				            RightShift = 'RShift',
-				            MouseButton1 = "Mouse1",
-				            MouseButton2 = "Mouse2"
 				        }
 
 						keybind_data.Value =  keybind_options.default
@@ -1437,33 +1445,34 @@ function library:AddWindow(title, options)
 							if Keybind == Enum.KeyCode.Escape or Keybind == Enum.KeyCode.Backspace or Keybind == keybind_data.Value then
 								Keybind = nil
 							end
-							local keytext = shortkeys[Keybind.Name] or Keybind and Keybind.Name or "None"
+							local keytext = shortkeys[Keybind and Keybind.Name] or Keybind and Keybind.Name or "None"
 							input.Text = keytext
 							keybind_data.Value = Keybind
 						end
 
 						UIS.InputBegan:Connect(function(a, b)
-							-- TODO: add textbox check here bc typing and enabling modules not fun
-							if checks.binding then
-								task.spawn(function()
-									task.wait()
-									checks.binding = false
-								end)
+							if UIS:GetFocusedTextBox() then
 								return
 							end
+							
+							if checks.binding == keybind_data and a.UserInputType == Enum.UserInputType.Keyboard then
+								keybind_data:SetKeybind(a.KeyCode)
+								checks.binding = nil
+								return
+							end
+
 							if a.KeyCode == keybind_data.Value and not b then
-								pcall(callback, keybind_data.Value)
+								local s,e = pcall(callback, keybind_data.Value)
+								if not s then warn('Keybind callback error: ' .. e) end
 							end
 						end)
 
-						keybind_data:SetKeybind(keybind_options.standard)
+						keybind_data:SetKeybind(keybind_options.default)
 
 						input.MouseButton1Click:Connect(function()
 							if checks.binding then return end
 							input.Text = "..."
-							checks.binding = true
-							local a, b = UIS.InputBegan:Wait()
-							keybind_data:SetKeybind(a.KeyCode)
+							checks.binding = keybind_data
 						end)
 
 						keybind_data.Instance = keybind_instance
@@ -1575,7 +1584,7 @@ function library:AddWindow(title, options)
 						return dropdown_data
 					end
 
-					function tab_data:AddColorPicker(callback)
+					function tab_data:AddColorPicker(callback, default)
 						local color_picker_data = {}
 						callback = typeof(callback) == "function" and callback or function()end
 
@@ -1640,6 +1649,8 @@ function library:AddWindow(title, options)
 
 									task.spawn(function() -- Loop check
 										while Held and Entered1 and (not dropdown_open) do -- Palette
+											Window.Draggable = false
+
 											local mouse_location = gMouse()
 
 											local x = ((palette.AbsoluteSize.X - (mouse_location.X - palette.AbsolutePosition.X)) + 1)
@@ -1655,7 +1666,10 @@ function library:AddWindow(title, options)
 											RS.Heartbeat:Wait()
 										end
 
+										Window.Draggable = true
+
 										while Held and Entered2 and (not dropdown_open) do -- Saturation
+											Window.Draggable = false
 											local mouse_location = gMouse()
 											local y = ((palette.AbsoluteSize.Y - (mouse_location.Y - palette.AbsolutePosition.Y)) + 1.5)
 											v = y / 100
@@ -1665,6 +1679,8 @@ function library:AddWindow(title, options)
 											update()
 											RS.Heartbeat:Wait()
 										end
+
+										Window.Draggable = true
 									end)
 								end
 							end)
@@ -1681,6 +1697,10 @@ function library:AddWindow(title, options)
 								saturation.ImageColor3 = Color3.fromHSV(h2, 1, 1)
 								pcall(callback, color)
 								color_picker_data.Value = color
+							end
+
+							if default then
+								color_picker_data:Set(default)
 							end
 						end
 
@@ -2000,7 +2020,7 @@ function library:AddWindow(title, options)
 						button:GetChildren()[1].ZIndex = button:GetChildren()[1].ZIndex + (windows * 10)
 
 						folder.Parent = new_tab
-						button.Text = "      " .. folder_name
+						button.Text = "        " .. folder_name
 
 						task.spawn(function()
 							while true do
@@ -2070,5 +2090,7 @@ function library:AddWindow(title, options)
 
 	return window_data
 end
+
+library.default_options = ui_options
 
 return library

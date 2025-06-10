@@ -191,6 +191,9 @@
     
         local TypeOf = typeof(Object)
         local NewMethodName = MethodName or TypeDefaults[TypeOf] or "Destroy"
+        if (TypeOf == 'table' and Object._signal) then 
+            NewMethodName = "Disconnect"
+        end
     
         if TypeOf == "function" or TypeOf == "thread" then
             if NewMethodName ~= true then
